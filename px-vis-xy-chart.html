@@ -1173,36 +1173,57 @@ Custom property | Description
      *
      */
     _hoverEditableStripe: function(index) {
-        var x0 = this.x(this.stripeData[this.stripeType][index][0]),
-            x1 = this.stripeData[this.stripeType][index][1] || this.stripeData[this.stripeType][index][1] === 0 ? this.x(this.stripeData[this.stripeType][index][1]) : this.x(this.stripeData[this.stripeType][index][0] + 1),
-            w = x1 - x0;
+      var d = this.x.domain(),
+        tMin = d[0],
+        tMax = d[d.length - 1],
+        tempX0 = this.stripeData[this.stripeType][index][0],
+        tempX1 = this.stripeData[this.stripeType][index][1] || this.stripeData[this.stripeType][index][1] === 0 ? this.stripeData[this.stripeType][index][1] : this.stripeData[this.stripeType][index][0] + 1,
+        x0, x1;
 
-        this._stripeHighlight
-            .attr('stroke', this.stripeConfig[this.stripeType]['fillColor'])
-            .on("click", this._deleteStripe.bind(this))
-            .attr('pointer-events', 'all')
-            .style('visibility', null);
+      if(tMin <= tempX0 && tMax >= tempX0 && tMax <= tempX1) {
+        // our new box overlaps lower end of old box
+        x0 = this._getLeftStripeExtensionOffset(d, tempX0);
+        x1 = this._getRightStripeExtensionOffset(d, tMax);
+      } else if(tMin >= tempX0 && tMin <= tempX1 && tMax >= tempX1) {
+        // our new box overlaps upper end of old box
+        x0 = this._getLeftStripeExtensionOffset(d, tMin);
+        x1 = this._getRightStripeExtensionOffset(d, tempX1);
+      } else if(tMax >= tempX0 && tMax <= tempX1 && tMin >= tempX0 && tMin <= tempX1) {
+        // if domain start and end is in between the stripe data
+        x0 = this.x(tMin);
+        x1 = this.x(tMax);
+      } else {
+        // domain is a superset for stripe data
+        x0 = this._getLeftStripeExtensionOffset(d, tempX0);
+        x1 = this._getRightStripeExtensionOffset(d, tempX1);
+      }
 
-        this._stripeController.select("rect.overlay")
-            .attr('pointer-events', 'all');
+      this._stripeHighlight
+          .attr('stroke', this.stripeConfig[this.stripeType]['fillColor'])
+          .on("click", this._deleteStripe.bind(this))
+          .attr('pointer-events', 'all')
+          .style('visibility', null);
 
-        this._stripeController
-            .on("click", this._deleteStripe.bind(this))
-            //turn off when you leave out the top of bottomv
-            .on("mouseleave", this._hideStripeHover.bind(this))
-            //turn off when you leave out the sides
-            .on("mousemove", function() {
-                if(Polymer.dom(Px.d3.event).path[0].classList.contains('overlay')) {
-                    this._hideStripeHover();
-                }
-            }.bind(this))
-            .call(this._stripeBrush.move, [x0, x1]);
+      this._stripeController.select("rect.overlay")
+          .attr('pointer-events', 'all');
 
-        this._stripeBrush
-            .on("start", this._stripeEditStart.bind(this))
-            .on("end", this._stripeEditEnd.bind(this));
+      this._stripeController
+          .on("click", this._deleteStripe.bind(this))
+          //turn off when you leave out the top of bottomv
+          .on("mouseleave", this._hideStripeHover.bind(this))
+          //turn off when you leave out the sides
+          .on("mousemove", function() {
+              if(Polymer.dom(Px.d3.event).path[0].classList.contains('overlay')) {
+                  this._hideStripeHover();
+              }
+          }.bind(this))
+          .call(this._stripeBrush.move, [x0, x1]);
 
-        this._stripeDataIndex = index;
+      this._stripeBrush
+          .on("start", this._stripeEditStart.bind(this))
+          .on("end", this._stripeEditEnd.bind(this));
+
+      this._stripeDataIndex = index;
 
     },
 
@@ -1224,6 +1245,30 @@ Custom property | Description
                 this.remove();
             })
             .on('mouseleave', function() { this.remove(); });
+    },
+
+    _getLeftStripeExtensionOffset: function getLeftStripeExtensionOffset(domain, stripeBoundary) {
+      var domainBoundary = domain[0],
+          xVal = this.x(stripeBoundary);
+
+      if (domainBoundary === stripeBoundary) return xVal;else {
+        // getting the previous value off of the domain left boundary and subtracting the stripe left boundary from it
+        // then taking 49 percent of the width to extend the stripe extension offset
+        return xVal - (xVal - this.x(domain[domain.indexOf(stripeBoundary) - 1])) * 0.50;
+      }
+    },
+
+    _getRightStripeExtensionOffset: function getRightStripeExtensionOffset(domain, stripeBoundary) {
+      var domainBoundary = domain[domain.length - 1],
+          xVal = this.x(stripeBoundary);
+
+      if (domainBoundary === stripeBoundary) {
+        return xVal;
+      } else {
+        // getting the next value off of the domain right boundary and subtracting the stripe right boundary from it
+        // then taking 51 percent of the width to extend the stripe extension offset
+        return xVal + (this.x(domain[domain.indexOf(stripeBoundary) + 1]) - xVal) * 0.50;
+      }
     },
 
     /**
