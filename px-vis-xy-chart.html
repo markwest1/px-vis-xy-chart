@@ -1172,103 +1172,106 @@ Custom property | Description
      * When a stripe is hovered over, set up our brush to capture other interactions
      *
      */
-    _hoverEditableStripe: function(index) {
+    _hoverEditableStripe: function _hoverEditableStripe(index) {
       var d = this.x.domain(),
         tMin = d[0],
         tMax = d[d.length - 1],
-        tempX0 = this.stripeData[this.stripeType][index][0],
-        tempX1 = this.stripeData[this.stripeType][index][1] || this.stripeData[this.stripeType][index][1] === 0 ? this.stripeData[this.stripeType][index][1] : this.stripeData[this.stripeType][index][0] + 1,
-        x0, x1;
+        x0,
+        x1;
 
-      if(tMin <= tempX0 && tMax >= tempX0 && tMax <= tempX1) {
-        // our new box overlaps lower end of old box
-        x0 = this._getLeftStripeExtensionOffset(d, tempX0);
-        x1 = this._getRightStripeExtensionOffset(d, tMax);
-      } else if(tMin >= tempX0 && tMin <= tempX1 && tMax >= tempX1) {
-        // our new box overlaps upper end of old box
-        x0 = this._getLeftStripeExtensionOffset(d, tMin);
-        x1 = this._getRightStripeExtensionOffset(d, tempX1);
-      } else if(tMax >= tempX0 && tMax <= tempX1 && tMin >= tempX0 && tMin <= tempX1) {
-        // if domain start and end is in between the stripe data
-        x0 = this.x(tMin);
-        x1 = this.x(tMax);
-      } else {
-        // domain is a superset for stripe data
-        x0 = this._getLeftStripeExtensionOffset(d, tempX0);
-        x1 = this._getRightStripeExtensionOffset(d, tempX1);
+      var boundaries = this._getBoundaries(d,this.stripeData[this.stripeType][index]);
+      if(boundaries[0]){
+        x0 = boundaries[1];
+        x1 = boundaries[2];
       }
 
-      this._stripeHighlight
-          .attr('stroke', this.stripeConfig[this.stripeType]['fillColor'])
-          .on("click", this._deleteStripe.bind(this))
-          .attr('pointer-events', 'all')
-          .style('visibility', null);
+      this._stripeHighlight.attr('stroke', this.stripeConfig[this.stripeType]['fillColor']).on("click", this._deleteStripe.bind(this)).attr('pointer-events', 'all').style('visibility', null);
 
-      this._stripeController.select("rect.overlay")
-          .attr('pointer-events', 'all');
+      this._stripeController.select("rect.overlay").attr('pointer-events', 'all');
 
-      this._stripeController
-          .on("click", this._deleteStripe.bind(this))
-          //turn off when you leave out the top of bottomv
-          .on("mouseleave", this._hideStripeHover.bind(this))
-          //turn off when you leave out the sides
-          .on("mousemove", function() {
-              if(Polymer.dom(Px.d3.event).path[0].classList.contains('overlay')) {
-                  this._hideStripeHover();
-              }
-          }.bind(this))
-          .call(this._stripeBrush.move, [x0, x1]);
+      this._stripeController.on("click", this._deleteStripe.bind(this))
+      //turn off when you leave out the top of bottomv
+        .on("mouseleave", this._hideStripeHover.bind(this))
+        //turn off when you leave out the sides
+        .on("mousemove", function () {
+          if (Polymer.dom(Px.d3.event).path[0].classList.contains('overlay')) {
+            this._hideStripeHover();
+          }
+        }.bind(this)).call(this._stripeBrush.move, [x0, x1]);
 
-      this._stripeBrush
-          .on("start", this._stripeEditStart.bind(this))
-          .on("end", this._stripeEditEnd.bind(this));
+      this._stripeBrush.on("start", this._stripeEditStart.bind(this)).on("end", this._stripeEditEnd.bind(this));
 
       this._stripeDataIndex = index;
-
     },
 
-    _hoverSingleVectorStripe: function(index) {
-        const x0 = this.x(this.stripeData[this.stripeType][index][0]);
-        const _this = this;
-        this.layer[4].append("line")
-            .attr('x1', x0)
-            .attr('x2', x0)
-            .attr('y1', this._internalMargin.top)
-            .attr('y2', this.height - this._internalMargin.top - this._internalMargin.bottom)
-            .attr('stroke', this.stripeConfig[this.stripeType]['fillColor'])
-            .attr('stroke-dasharray', this.stripeConfig[this.stripeType]['dash'])
-            .attr('stroke-width', 4)
-            .attr('shape-rendering','crispEdges')
-            .attr('pointer-events', 'all')
-            .on('click', function() {
-                _this._deleteStripe();
-                this.remove();
-            })
-            .on('mouseleave', function() { this.remove(); });
+    _hoverSingleVectorStripe: function _hoverSingleVectorStripe(index) {
+      var x0 = this.x(this.stripeData[this.stripeType][index][0]);
+      var _this = this;
+      this.layer[4].append("line").attr('x1', x0).attr('x2', x0).attr('y1', this._internalMargin.top).attr('y2', this.height - this._internalMargin.top - this._internalMargin.bottom).attr('stroke', this.stripeConfig[this.stripeType]['fillColor']).attr('stroke-dasharray', this.stripeConfig[this.stripeType]['dash']).attr('stroke-width', 4).attr('shape-rendering', 'crispEdges').attr('pointer-events', 'all').on('click', function () {
+        _this._deleteStripe();
+        this.remove();
+      }).on('mouseleave', function () {
+        this.remove();
+      });
     },
 
-    _getLeftStripeExtensionOffset: function getLeftStripeExtensionOffset(domain, stripeBoundary) {
-      var domainBoundary = domain[0],
-          xVal = this.x(stripeBoundary);
+    _getBoundaries: function(domain, stripeBoundary){
+      var leftDomainBoundary = domain[0],
+        rightDomainBoundary = domain[domain.length - 1],
+        nearestLeftBoundary = this._findNearestOptimized(stripeBoundary[0], domain),
+        nearestRightBoundary = this._findNearestOptimized(stripeBoundary[1], domain),
+        leftBoundaryIdx = nearestLeftBoundary[1],
+        rightBoundaryIdx = nearestRightBoundary[0],
+        leftBoundaryDomainVal = domain[leftBoundaryIdx],
+        rightBoundaryDomainVal = domain[rightBoundaryIdx],
+        leftXVal = this.x(leftBoundaryDomainVal),
+        rightXVal = this.x(rightBoundaryDomainVal);
 
-      if (domainBoundary === stripeBoundary) return xVal;else {
-        // getting the previous value off of the domain left boundary and subtracting the stripe left boundary from it
-        // then taking 49 percent of the width to extend the stripe extension offset
-        return xVal - (xVal - this.x(domain[domain.indexOf(stripeBoundary) - 1])) * 0.50;
+      // if neither point was an exact match, and BOTH points fall between the same 2 domain values, then this is // a zero-length stripe in this domain, and it should NOT be rendered
+      if (!nearestLeftBoundary[2] && !nearestRightBoundary[2]
+        && nearestLeftBoundary[0] === nearestRightBoundary[0]
+        && nearestLeftBoundary[1] === nearestRightBoundary[1]){
+        return [false, null, null];
       }
+
+      var left = (leftDomainBoundary === leftBoundaryDomainVal)
+        ? this.x(leftDomainBoundary)
+        : leftXVal - (leftXVal - this.x(domain[leftBoundaryIdx - 1])) * 0.50;
+      // leftBoundaryIdx - (leftBoundaryIdx - this.x(domain[leftBoundaryIdx - 1])) * 0.50;
+      var right = (rightDomainBoundary === rightBoundaryDomainVal)
+        ? this.x(rightDomainBoundary)
+        : rightXVal + (this.x(domain[rightBoundaryIdx + 1]) - rightXVal) * 0.50;
+      // rightBoundaryIdx + (this.x(domain[rightBoundaryIdx + 1]) - rightBoundaryIdx) * 0.50;;
+
+      return [true, left, right];
     },
 
-    _getRightStripeExtensionOffset: function getRightStripeExtensionOffset(domain, stripeBoundary) {
-      var domainBoundary = domain[domain.length - 1],
-          xVal = this.x(stripeBoundary);
+    _findNearestOptimized: function(value, values) {
+      if (!values || values.length === 0) { return [-1, -1, false]; }
 
-      if (domainBoundary === stripeBoundary) {
-        return xVal;
-      } else {
-        // getting the next value off of the domain right boundary and subtracting the stripe right boundary from it
-        // then taking 51 percent of the width to extend the stripe extension offset
-        return xVal + (this.x(domain[domain.indexOf(stripeBoundary) + 1]) - xVal) * 0.50;
+      let min = 0;
+      let max = values.length - 1;
+      let index;
+      let currentElement;
+
+      // if it is less than the min, the value
+      if (value < values[min]) { return [ -1, min, false ]; }
+      if (value > values[max]) { return [ max, -1, false ]; }
+
+      // keep searching until/unless we get our min and max indices reversed, in which case we didn't find the value
+      while (min <= max) {
+        // This follows binary search examples online, but there's a more optimized (but harder to read) way to find the midpoint: https://oli.me.uk/2013/06/08/searching-javascript-arrays-with-a-binary-search/
+        index = Math.floor((min + max) / 2);
+        currentElement = values[index];
+
+        if (currentElement < value) { min = index + 1; }
+        else if (currentElement > value) { max = index - 1; }
+        else { return [ index, index, true ]; } // got it!
       }
+
+      // The order of min and max will get reversed when a number isn't found (i.e. we keep looping until min > max), but we know these identify the points surrounding
+      // the value specified. So, if this is the case, we know the values before and after in the set.
+      return [ max, min, values[index] === value ];
     },
 
     /**
