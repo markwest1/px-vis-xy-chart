@@ -143,17 +143,15 @@ Custom property | Description
           display-page-arrows="[[_registerDisplayPageArrows]]">
         </px-vis-register>
         <div id="drawingWrapper" class="flex--col inline--flex">
-          <template is="dom-if" if="[[!removeToolbar]]">
-            <px-vis-toolbar
-              id="toolbar"
-              current-sub-config="[[toolbarSubConfig]]"
-              action-config="{{actionConfig}}"
-              within-chart
-              chart-margin="[[_internalMargin]]"
-              show-tooltip="{{_internalShowTooltip}}"
-              config='{"zoom": true, "pan": true, "tooltip": true}'>
-            </px-vis-toolbar>
-          </template>
+          <px-vis-toolbar
+            id="toolbar"
+            current-sub-config="[[toolbarSubConfig]]"
+            action-config="{{actionConfig}}"
+            within-chart
+            chart-margin="[[_internalMargin]]"
+            show-tooltip="{{_internalShowTooltip}}"
+            config='{"zoom": true, "pan": true, "tooltip": true}'>
+          </px-vis-toolbar>
           <!-- Core -->
           <px-vis-tooltip
             id="tooltip"
@@ -695,14 +693,6 @@ Custom property | Description
         type: Number,
         value: null
       },
-      
-      /**
-      * This is help us temporarily hide & show the toolbar
-      */
-      removeToolbar: {
-          type: Boolean,
-          value: true
-      }
     },
     observers: [
       '_xAxisConfigChanged(xAxisConfig.*)',
@@ -748,14 +738,10 @@ Custom property | Description
 
     ready: function() {
       this.set('_verticalRegisterDrawingCanvasId', 'svg');
-      
-      if(!this.removeToolbar)
-        this.set('_verticalRegisterHeightDeductions', ['toolbar']);
-
+      this.set('_verticalRegisterHeightDeductions', ['toolbar']);
       this.set('numberOfLayers',5);
-
-        //add in our striping option
-        this._extentsDataRoutes['stripe'] = '_createStripe';
+      //add in our striping option
+      this._extentsDataRoutes['stripe'] = '_createStripe';
     },
     attached: function() {
       this._isAttached = true;
@@ -839,7 +825,7 @@ Custom property | Description
       }
       var wrapperRect = this.$.wrapper.getBoundingClientRect(),
           registerRect = this.$.register.getBoundingClientRect(),
-          toolbarRect = (this.removeToolbar) ? {height:0, width: 0} : this.$.toolbar.getBoundingClientRect(),
+          toolbarRect = this.$.toolbar.getBoundingClientRect(),
           heightDeduct = 0,
           widthDeduct = 0;
 
@@ -850,14 +836,11 @@ Custom property | Description
         widthDeduct += registerRect.width;
       }
 
-      if(!this.removeToolbar)
-        heightDeduct += toolbarRect.height;
+      heightDeduct += toolbarRect.height;
 
       this.set('width', Math.max(wrapperRect.width - widthDeduct, 0));
       this.set('height', Math.max(wrapperRect.height - heightDeduct, 0));
-      
-      if(!this.removeToolbar)
-        this._computeVerticalRegisterHeight([toolbarRect.height]);
+      this._computeVerticalRegisterHeight([toolbarRect.height]);
     },
 
     /**
