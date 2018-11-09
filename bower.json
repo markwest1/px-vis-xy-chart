@@ -22,7 +22,7 @@
   ],
   "dependencies": {
     "polymer": "#1.9 - 2",
-    "px-vis": "https://github.com/jcheenatcode/px-vis.git#master",
+    "px-vis": "https://github.com/jcheenatcode/px-vis.git#correlation",
     "px-tooltip": "^1.3.0",
     "iron-resizable-behavior": "^2.0.0",
     "app-localize-behavior": "^2.0.0"
